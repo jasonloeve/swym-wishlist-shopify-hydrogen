@@ -14,6 +14,7 @@ import {
   SearchFormPredictive,
 } from '~/components/SearchFormPredictive';
 import {SearchResultsPredictive} from '~/components/SearchResultsPredictive';
+import {useSwymInit} from "~/services/swym/hooks";
 
 interface PageLayoutProps {
   cart: Promise<CartApiQueryFragment | null>;
@@ -32,6 +33,10 @@ export function PageLayout({
   isLoggedIn,
   publicStoreDomain,
 }: PageLayoutProps) {
+
+  // Initialize Swym wishlist functionality
+  useSwymInit();
+
   return (
     <Aside.Provider>
       <CartAside cart={cart} />
