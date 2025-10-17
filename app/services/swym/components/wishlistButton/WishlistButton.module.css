@@ -1,0 +1,27 @@
+.wishlistButton {}
+
+.wishlistIcon {
+ will-change: transform;
+ transition: all 200ms ease-in-out;
+ cursor: pointer;
+}
+
+.wishlistIcon:hover {
+ transform: scale(1.1);
+}
+
+.wishlistIcon svg {
+ fill: transparent;
+
+ path {
+  stroke: #000;
+ }
+}
+
+.wishlistIcon.wishlistEnabled svg {
+ fill: #FF0000FF;
+
+ path {
+  stroke: #FF0000FF;
+ }
+}
