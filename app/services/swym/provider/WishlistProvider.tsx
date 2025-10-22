@@ -7,10 +7,7 @@ import {
 } from 'react';
 import {WishlistContext} from './WishlistContext';
 import type {SwymConfig, SwymList} from '~/services/swym/swym.types';
-
-const LOCAL_STORAGE_CONFIG = 'swym-data';
-const LOCAL_STORAGE_WISHLISTS = 'swym-list-data';
-const LOCAL_STORAGE_SELECTED_WISHLIST_ID = 'swym-list-id';
+import {STORAGE_KEYS} from '~/services/swym/swym.constants';
 
 // Helper functions for localStorage
 const getStorageItem = <T,>(key: string, fallback: T): T => {
@@ -46,31 +43,31 @@ interface WishlistProviderProps {
 
 export const WishlistProvider = ({children}: WishlistProviderProps) => {
   const [swymConfig, setSwymConfig] = useState<SwymConfig | null>(() =>
-    getStorageItem<SwymConfig | null>(LOCAL_STORAGE_CONFIG, null)
+    getStorageItem<SwymConfig | null>(STORAGE_KEYS.CONFIG, null)
   );
 
-  const [swymWishlists, setSwymWishlists] = useState<SwymList[]>(() =>
-    getStorageItem<SwymList[]>(LOCAL_STORAGE_WISHLISTS, [])
+  const [availableWishlists, setAvailableWishlists] = useState<SwymList[]>(() =>
+    getStorageItem<SwymList[]>(STORAGE_KEYS.WISHLISTS, [])
   );
 
-  const [swymWishlistId, setSwymWishlistId] = useState<string>(() =>
-    getStorageItem<string>(LOCAL_STORAGE_SELECTED_WISHLIST_ID, '')
+  const [selectedWishlistId, setSelectedWishlistId] = useState<string>(() =>
+    getStorageItem<string>(STORAGE_KEYS.SELECTED_WISHLIST_ID, '')
   );
 
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Sync to localStorage when state changes
   useEffect(() => {
-    setStorageItem(LOCAL_STORAGE_CONFIG, swymConfig);
+    setStorageItem(STORAGE_KEYS.CONFIG, swymConfig);
   }, [swymConfig]);
 
   useEffect(() => {
-    setStorageItem(LOCAL_STORAGE_WISHLISTS, swymWishlists);
-  }, [swymWishlists]);
+    setStorageItem(STORAGE_KEYS.WISHLISTS, availableWishlists);
+  }, [availableWishlists]);
 
   useEffect(() => {
-    setStorageItem(LOCAL_STORAGE_SELECTED_WISHLIST_ID, swymWishlistId);
-  }, [swymWishlistId]);
+    setStorageItem(STORAGE_KEYS.SELECTED_WISHLIST_ID, selectedWishlistId);
+  }, [selectedWishlistId]);
 
   // Mark as initialized once we have config
   useEffect(() => {
@@ -83,22 +80,22 @@ export const WishlistProvider = ({children}: WishlistProviderProps) => {
     setSwymConfig(newConfig);
   }, []);
 
-  const updateSwymWishlists = useCallback((newWishlists: SwymList[]) => {
-    setSwymWishlists(newWishlists);
+  const updateAvailableWishlists = useCallback((newWishlists: SwymList[]) => {
+    setAvailableWishlists(newWishlists);
   }, []);
 
-  const updateSwymWishlistId = useCallback((newWishlistId: string) => {
-    setSwymWishlistId(newWishlistId);
+  const updateSelectedWishlistId = useCallback((newWishlistId: string) => {
+    setSelectedWishlistId(newWishlistId);
   }, []);
 
   const resetWishlistState = useCallback(() => {
-    removeStorageItem(LOCAL_STORAGE_CONFIG);
-    removeStorageItem(LOCAL_STORAGE_WISHLISTS);
-    removeStorageItem(LOCAL_STORAGE_SELECTED_WISHLIST_ID);
+    removeStorageItem(STORAGE_KEYS.CONFIG);
+    removeStorageItem(STORAGE_KEYS.WISHLISTS);
+    removeStorageItem(STORAGE_KEYS.SELECTED_WISHLIST_ID);
 
     setSwymConfig(null);
-    setSwymWishlists([]);
-    setSwymWishlistId('');
+    setAvailableWishlists([]);
+    setSelectedWishlistId('');
     setIsInitialized(false);
   }, []);
 
@@ -106,20 +103,20 @@ export const WishlistProvider = ({children}: WishlistProviderProps) => {
     () => ({
       swymConfig,
       updateSwymConfig,
-      swymWishlists,
-      updateSwymWishlists,
-      swymWishlistId,
-      updateSwymWishlistId,
+      availableWishlists,
+      updateAvailableWishlists,
+      selectedWishlistId,
+      updateSelectedWishlistId,
       resetWishlistState,
       isInitialized,
     }),
     [
       swymConfig,
       updateSwymConfig,
-      swymWishlists,
-      updateSwymWishlists,
-      swymWishlistId,
-      updateSwymWishlistId,
+      availableWishlists,
+      updateAvailableWishlists,
+      selectedWishlistId,
+      updateSelectedWishlistId,
       resetWishlistState,
       isInitialized,
     ]

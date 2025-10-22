@@ -4,10 +4,10 @@ import type { SwymConfig, SwymList } from '~/services/swym/swym.types';
 export interface WishlistContextValue {
   swymConfig: SwymConfig | null;
   updateSwymConfig: (value: SwymConfig | null) => void;
-  swymWishlists: SwymList[];
-  updateSwymWishlists: (value: SwymList[]) => void;
-  swymWishlistId: string;
-  updateSwymWishlistId: (value: string) => void;
+  availableWishlists: SwymList[];
+  updateAvailableWishlists: (value: SwymList[]) => void;
+  selectedWishlistId: string;
+  updateSelectedWishlistId: (value: string) => void;
   resetWishlistState: () => void;
   isInitialized: boolean;
 }
@@ -15,10 +15,10 @@ export interface WishlistContextValue {
 const defaultContextValue: WishlistContextValue = {
   swymConfig: null,
   updateSwymConfig: () => {},
-  swymWishlists: [],
-  updateSwymWishlists: () => {},
-  swymWishlistId: '',
-  updateSwymWishlistId: () => {},
+  availableWishlists: [],
+  updateAvailableWishlists: () => {},
+  selectedWishlistId: '',
+  updateSelectedWishlistId: () => {},
   resetWishlistState: () => {},
   isInitialized: false,
 };

@@ -1,9 +1,8 @@
 import type {Route} from './+types/api.generateRegid';
-import {v4 as uuidv4} from 'uuid';
-import {getCustomerData} from '~/services/shopify';
 import {encodeBasicAuth} from '~/services/swym/swym.utils';
-import SWYM_CONFIG from '~/services/swym/swym.config';
-import {DeviceType} from '~/services/swym/swym.types';
+import {getSwymConfig} from '~/services/swym/swym.config.server';
+import {SWYM_DEFAULTS} from '~/services/swym/swym.constants';
+import type {DeviceType} from '~/services/swym/swym.types';
 
 interface GenerateRegidRequestBody {
   useragenttype?: DeviceType;
@@ -29,38 +28,37 @@ export async function action({context, request}: Route.ActionArgs) {
   try {
     const body = (await request.json()) as GenerateRegidRequestBody;
     const deviceType = body?.useragenttype || 'unknown';
-    const appId = body?.appId || 'Wishlist';
+    const appId = body?.appId || SWYM_DEFAULTS.APP_ID;
+
+    // Get Swym configuration from context.env
+    const config = getSwymConfig(context.env);
 
     const authHeader = encodeBasicAuth(
-      SWYM_CONFIG.PID,
-      SWYM_CONFIG.REST_API_KEY,
+      config.PID,
+      config.REST_API_KEY,
     );
-    const endpointUrl = `${SWYM_CONFIG.ENDPOINT}/storeadmin/v3/user/generate-regid?appId=${appId}`;
+
+    const endpointUrl = `${config.ENDPOINT}/storeadmin/v3/user/generate-regid?appId=${appId}`;
 
     const formParams = new URLSearchParams();
     formParams.append('useragenttype', deviceType);
 
     // Try to get customer email if logged in
-    // @TODO - Method needs to be refactored to work in default Hydrogen base using new customer accounts.
     let customerEmail: string | undefined;
-    const customerAccessToken = await context.session.get('customerAccessToken');
 
-    if (customerAccessToken) {
-      try {
-        const customer = await getCustomerData(context, customerAccessToken);
-        customerEmail = customer?.email;
-      } catch (error) {
-        console.warn('Failed to fetch customer data:', error);
-      }
+    try {
+      const customer = await context.customerAccount.get();
+      customerEmail = customer?.email;
+    } catch (error) {
+      // Customer not logged in or account API unavailable
+      // This is expected for guest users
     }
 
     // Use customer email if available, otherwise generate UUID for guest
-    const hasValidEmail = customerEmail && customerEmail !== 'undefined';
-
-    if (hasValidEmail) {
+    if (customerEmail) {
       formParams.append('useremail', customerEmail);
     } else {
-      formParams.append('uuid', uuidv4());
+      formParams.append('uuid', crypto.randomUUID());
     }
 
     // Call Swym API

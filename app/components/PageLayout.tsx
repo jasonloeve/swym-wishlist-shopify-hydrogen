@@ -14,13 +14,19 @@ import {
   SearchFormPredictive,
 } from '~/components/SearchFormPredictive';
 import {SearchResultsPredictive} from '~/components/SearchResultsPredictive';
-import {useSwymInit} from "~/services/swym/hooks";
+import {useSwymInit, useSyncWishlistOnLogin} from '~/services/swym/hooks';
+
+interface Customer {
+  email: string;
+  id?: string;
+}
 
 interface PageLayoutProps {
   cart: Promise<CartApiQueryFragment | null>;
   footer: Promise<FooterQuery | null>;
   header: HeaderQuery;
   isLoggedIn: Promise<boolean>;
+  customer?: Customer | null;
   publicStoreDomain: string;
   children?: React.ReactNode;
 }
@@ -31,11 +37,15 @@ export function PageLayout({
   footer,
   header,
   isLoggedIn,
+  customer,
   publicStoreDomain,
 }: PageLayoutProps) {
 
   // Initialize Swym wishlist functionality
   useSwymInit();
+
+  // Sync guest wishlist to customer on login
+  useSyncWishlistOnLogin(customer ?? null);
 
   return (
     <Aside.Provider>

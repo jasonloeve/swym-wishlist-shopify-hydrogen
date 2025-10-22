@@ -1,9 +1,14 @@
+// @TODO - Further development needed
+// Build Shopify product query
+// Build this to bare bones limited styling grid
+// Further functionality will be required when multi list functionality is built in
 import {useEffect, useState} from 'react';
 import {fetchListWithContents} from '~/services/swym/swym';
 import {useWishlistContext} from "~/services/swym/provider";
 import {EmptyWishlist} from './EmptyWishlist';
 import styles from './Wishlist.module.css';
 
+// @NOTE - This query api isn't included in this build, look into using Hydrogen standard query
 const fetchProductsData = async (productIds: (string | number)[]) => {
   const response = await fetch(`/api/products?productIds=${productIds.join(',')}`);
   return response.json();
@@ -12,8 +17,8 @@ const fetchProductsData = async (productIds: (string | number)[]) => {
 export const Wishlist = () => {
   const {
     swymConfig,
-    swymWishlists,
-    swymWishlistId,
+    availableWishlists,
+    selectedWishlistId,
   } = useWishlistContext();
 
   const [products, setProducts] = useState([]);
@@ -21,14 +26,28 @@ export const Wishlist = () => {
   // Once wishlist id is set, fetch wishlist contents from Swym
   useEffect(() => {
     const fetchWishlistContents = async () => {
-      if (!swymWishlistId) return;
+      if (!selectedWishlistId || !swymConfig) return;
 
       try {
-        const wishlistContents = await fetchListWithContents(swymWishlistId, swymConfig);
+        const wishlistContents = await fetchListWithContents(selectedWishlistId, swymConfig);
 
-        // Safely extract product IDs from wishlist contents
-        const items = wishlistContents?.data?.items || [];
-        const productIds = items.map((item) => item.empi).filter(Boolean); // filter out undefined/null
+        if (!wishlistContents.ok) {
+          console.error('Failed to fetch wishlist:', wishlistContents.message);
+          setProducts([]);
+          return;
+        }
+
+        const items = wishlistContents?.data?.listcontents || [];
+
+        if (items.length === 0) {
+          setProducts([]);
+          return;
+        }
+
+        // Extract product IDs and filter out invalid values
+        const productIds = items
+          .map((item) => item.empi)
+          .filter((id): id is number => typeof id === 'number' && id > 0);
 
         if (productIds.length === 0) {
           setProducts([]);
@@ -41,18 +60,15 @@ export const Wishlist = () => {
 
       } catch (error) {
         console.error('Error loading wishlist or products:', error);
+        setProducts([]);
       }
     };
 
     fetchWishlistContents();
-  }, [swymWishlists]);
+  }, [selectedWishlistId, swymConfig]);
 
   return (
     <div>
-      <div>
-        <h2>Your Wishlist</h2>
-      </div>
-
       {products.length === 0 ? (
         <>
           <EmptyWishlist />
@@ -67,12 +83,6 @@ export const Wishlist = () => {
               <div key={product.id}>
                 Product Card
               </div>
-              // <ProductCard
-              //   key={product.id}
-              //   product={product}
-              //   quickAdd
-              //   productTag
-              // />
             ))}
           </div>
         </>

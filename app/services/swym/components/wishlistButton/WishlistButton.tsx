@@ -11,16 +11,20 @@ import {
 } from '~/services/swym/swym';
 import {useWishlistContext} from '~/services/swym/provider';
 import styles from './WishlistButton.module.css';
-import {extractProductId} from "~/services/swym/swym.utils";
+import {extractProductId} from '~/services/swym/swym.utils';
+import {useRouteLoaderData} from 'react-router';
+import type {ShopifyGID} from '~/services/swym/swym.types';
 
 interface WishlistIconProps {
   state: 'enabled' | 'disabled';
+  isLoading?: boolean;
 }
 
-function WishlistIcon({state}: WishlistIconProps) {
+function WishlistIcon({state, isLoading}: WishlistIconProps) {
   const className = [
     styles.wishlistIcon,
     state === 'enabled' && styles.wishlistEnabled,
+    isLoading && styles.wishlistLoading,
   ]
     .filter(Boolean)
     .join(' ');
@@ -47,42 +51,43 @@ function WishlistIcon({state}: WishlistIconProps) {
 }
 
 interface WishlistButtonProps {
-  productId: number;
-  variantId: number;
+  productId: ShopifyGID;
+  variantId: ShopifyGID;
   productUrl: string;
 }
 
 export function WishlistButton({productId, variantId, productUrl}: WishlistButtonProps) {
+  // @NOTE - Swym requires absolute product URL (origin + path + handle)
+  const {origin} = useRouteLoaderData('root');
+  const absoluteProductUrl = `${origin}${productUrl}`;
+
   const {
     swymConfig,
-    swymWishlists,
-    swymWishlistId,
-    updateSwymWishlists,
+    availableWishlists,
+    selectedWishlistId,
+    updateAvailableWishlists,
     isInitialized,
   } = useWishlistContext();
 
   const [wishlisted, setWishlisted] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Process product ids from standard Shopify to id only
-  const processProductId = extractProductId(productId);
-  const processVariantId = extractProductId(variantId)
-
-  // Swyn request requires absolute url origin + handle
-  // @NOTE - Build in functionality to get or build origin in root to be used here.
-  const absoluteUrl = `http://localhost:3000/products/${productUrl}`
+  // Convert Shopify GIDs to numeric IDs for Swym api requirements
+  const swymProductId = extractProductId(productId);
+  const swymVariantId = extractProductId(variantId);
 
   // Check if product is in wishlist
   const isProductInWishlist = useMemo(() => {
-    if (!swymWishlists || swymWishlists.length === 0) return false;
+    if (!availableWishlists || availableWishlists.length === 0) return false;
 
-    return swymWishlists.some((list) =>
+    return availableWishlists.some((list) =>
       list.listcontents?.some(
         (item) =>
-          item.empi === Number(processProductId) &&
-          item.epi === Number(processVariantId)
+          item.empi === Number(swymProductId) &&
+          item.epi === Number(swymVariantId)
       )
     );
-  }, [swymWishlists, processProductId, processVariantId]);
+  }, [availableWishlists, swymProductId, swymVariantId]);
 
   useEffect(() => {
     setWishlisted(isProductInWishlist);
@@ -94,25 +99,27 @@ export function WishlistButton({productId, variantId, productUrl}: WishlistButto
     const listData = await fetchLists(swymConfig);
 
     if (listData?.ok && listData.data) {
-      updateSwymWishlists(listData.data);
+      updateAvailableWishlists(listData.data);
     }
-  }, [swymConfig, updateSwymWishlists]);
+  }, [swymConfig, updateAvailableWishlists]);
 
   const handleClick = useCallback(async (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
 
-    if (!isInitialized || !swymConfig || !swymWishlistId) {
+    if (!isInitialized || !swymConfig || !selectedWishlistId) {
       console.warn('Wishlist not initialized yet');
       return;
     }
 
-    // @NOTE - Set a loading state to true at this point.
+    if (isLoading) return; // Prevent duplicate clicks
+
+    setIsLoading(true);
 
     try {
       const result = wishlisted
-        ? await removeFromWishlist(processProductId, processVariantId, productUrl, swymWishlistId, swymConfig)
-        : await addToWishlist(processProductId, processVariantId, productUrl, swymWishlistId, swymConfig);
+        ? await removeFromWishlist(Number(swymProductId), Number(swymVariantId), absoluteProductUrl, selectedWishlistId, swymConfig)
+        : await addToWishlist(Number(swymProductId), Number(swymVariantId), absoluteProductUrl, selectedWishlistId, swymConfig);
 
       if (result?.ok) {
         await updateButtonState();
@@ -121,34 +128,35 @@ export function WishlistButton({productId, variantId, productUrl}: WishlistButto
       }
     } catch (err) {
       console.error('Wishlist action failed:', err);
-      // @NOTE - Phase 2 - Consider showing toast notification to user
     } finally {
-      // @NOTE - Set loading state to false at this point.
-      console.debug('Completed')
+      setIsLoading(false);
     }
   }, [
     isInitialized,
     swymConfig,
-    swymWishlistId,
+    selectedWishlistId,
     wishlisted,
-    productId,
-    variantId,
-    productUrl,
+    isLoading,
+    swymProductId,
+    swymVariantId,
+    absoluteProductUrl, // @NOTE - Confirm this deps
     updateButtonState,
   ]);
 
   if (!isInitialized) {
-    return null; // Or return a skeleton/placeholder
+    return null;
   }
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={handleClick} // @NOTE - Investigate misuse
+      disabled={isLoading}
       aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+      aria-busy={isLoading}
       className={styles.wishlistButton}
     >
-      <WishlistIcon state={wishlisted ? 'enabled' : 'disabled'} />
+      <WishlistIcon state={wishlisted ? 'enabled' : 'disabled'} isLoading={isLoading} />
     </button>
   );
 }

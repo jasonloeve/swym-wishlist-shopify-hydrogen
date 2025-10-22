@@ -1,10 +1,11 @@
+// @NOTE - Consider using axios over fetch for better handling ?
 import {detectClientDeviceType} from '~/services/swym/swym.utils';
-import SWYM_CONFIG from '~/services/swym/swym.config';
 import type {
   SwymConfig,
   SwymResponse,
   SwymGenerateRegidResponse,
   DeviceType,
+  SwymList,
 } from '~/services/swym/swym.types';
 
 /**
@@ -60,7 +61,21 @@ export const callGenerateRegidApi = async ({
   }
 };
 
-export const callValidateSyncRegidApi = async ({
+/**
+ * Syncs a guest wishlist to a customer account after login
+ *
+ * @description
+ * This function transfers wishlist data from a guest session (identified by regid)
+ * to a customer account. It should be called after successful login to preserve
+ * the guest's wishlist items in their customer account.
+ *
+ * @param {Object} options - Configuration for the sync request
+ * @param {string} options.regid - The guest session identifier to sync from
+ * @param {DeviceType} [options.useragenttype] - Device type used in Swym tracking
+ * @returns {Promise<{ data?: SwymGenerateRegidResponse; error?: string }>}
+ * Returns the updated Swym credentials for the customer account or an error message
+ */
+export const syncGuestWishlistToCustomer = async ({
   regid,
   useragenttype = detectClientDeviceType(),
 }: {
@@ -77,20 +92,20 @@ export const callValidateSyncRegidApi = async ({
       body: JSON.stringify({useragenttype, regid}),
     };
 
-    const response = await fetch('/api/validateSyncRegid', config);
+    const response = await fetch('/api/syncGuestRegid', config);
     const result = await response.json();
 
     if (response.ok && result?.swymResponse?.regid) {
       return {data: result.swymResponse};
     } else {
-      console.warn('Swym regid validation failed:', result);
+      console.warn('Swym guest wishlist sync failed:', result);
       return {
-        error: result?.message || 'Swym regid validation failed',
+        error: result?.message || 'Swym guest wishlist sync failed',
       };
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Exception while validating regid:', error);
+    console.error('Exception while syncing guest wishlist:', error);
     return {
       error: errorMessage,
     };
@@ -112,30 +127,28 @@ export const callValidateSyncRegidApi = async ({
 export const fetchLists = async (
   swymConfig: SwymConfig
 ): Promise<SwymResponse<SwymList[]>> => {
-  const endpointUrl = `${SWYM_CONFIG.ENDPOINT}/api/v3/lists/fetch-lists?pid=${encodeURIComponent(SWYM_CONFIG.PID)}`;
-
-  const formBody = new URLSearchParams({
-    regid: swymConfig.regid,
-    sessionid: swymConfig.sessionid,
-  });
-
-  const fetchOptions: RequestInit = {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: formBody,
-  };
-
   try {
-    const response = await fetch(endpointUrl, fetchOptions);
-    const swymResponse = await response.json();
+    const response = await fetch('/api/swym', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'fetchLists',
+        regid: swymConfig.regid,
+        sessionid: swymConfig.sessionid,
+      }),
+    });
+
+    const result = await response.json();
 
     return {
-      ok: response.ok,
-      status: response.status,
-      data: swymResponse,
+      ok: result.ok ?? response.ok,
+      status: result.status ?? response.status,
+      data: result.data,
+      error: result.error,
+      message: result.message,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -176,14 +189,32 @@ export const addToWishlist = async (
       };
     }
 
-    const update = await updateList(productId, variantId, productUrl, listId, swymConfig);
+    const response = await fetch('/api/swym', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'updateList',
+        productId,
+        variantId,
+        productUrl,
+        lid: listId,
+        regid: swymConfig.regid,
+        sessionid: swymConfig.sessionid,
+        updateAction: 'add',
+      }),
+    });
+
+    const result = await response.json();
 
     return {
-      ok: update.ok,
-      status: update.status,
-      data: update.data,
-      error: update.error,
-      message: update.message,
+      ok: result.ok ?? response.ok,
+      status: result.status ?? response.status,
+      data: result.data,
+      error: result.error,
+      message: result.message,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -208,31 +239,29 @@ export const fetchListWithContents = async (
   lid: string,
   swymConfig: SwymConfig
 ): Promise<SwymResponse<SwymList>> => {
-  const endpointUrl = `${SWYM_CONFIG.ENDPOINT}/api/v3/lists/fetch-list-with-contents?pid=${encodeURIComponent(SWYM_CONFIG.PID)}`;
-
-  const formBody = new URLSearchParams({
-    regid: swymConfig.regid,
-    sessionid: swymConfig.sessionid,
-    lid,
-  });
-
-  const fetchOptions: RequestInit = {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: formBody,
-  };
-
   try {
-    const response = await fetch(endpointUrl, fetchOptions);
-    const swymResponse = await response.json();
+    const response = await fetch('/api/swym', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'fetchListWithContents',
+        lid,
+        regid: swymConfig.regid,
+        sessionid: swymConfig.sessionid,
+      }),
+    });
+
+    const result = await response.json();
 
     return {
-      ok: response.ok,
-      status: response.status,
-      data: swymResponse,
+      ok: result.ok ?? response.ok,
+      status: result.status ?? response.status,
+      data: result.data,
+      error: result.error,
+      message: result.message,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -266,31 +295,29 @@ export const createList = async (
   listName: string,
   swymConfig: SwymConfig
 ): Promise<SwymResponse<SwymList>> => {
-  const endpointUrl = `${SWYM_CONFIG.ENDPOINT}/api/v3/lists/create?pid=${encodeURIComponent(SWYM_CONFIG.PID)}`;
-
-  const formBody = new URLSearchParams({
-    regid: swymConfig.regid,
-    sessionid: swymConfig.sessionid,
-    lname: listName || 'My Wishlist',
-  });
-
-  const fetchOptions: RequestInit = {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: formBody,
-  };
-
   try {
-    const response = await fetch(endpointUrl, fetchOptions);
-    const swymResponse = await response.json();
+    const response = await fetch('/api/swym', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'createList',
+        listName: listName || 'My Wishlist',
+        regid: swymConfig.regid,
+        sessionid: swymConfig.sessionid,
+      }),
+    });
+
+    const result = await response.json();
 
     return {
-      ok: response.ok,
-      status: response.status,
-      data: swymResponse,
+      ok: result.ok ?? response.ok,
+      status: result.status ?? response.status,
+      data: result.data,
+      error: result.error,
+      message: result.message,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -321,95 +348,29 @@ export const deleteList = async (
   lid: string,
   swymConfig: SwymConfig
 ): Promise<SwymResponse> => {
-  const endpointUrl = `${SWYM_CONFIG.ENDPOINT}/api/v3/lists/delete-list?pid=${encodeURIComponent(SWYM_CONFIG.PID)}`;
-
-  const formBody = new URLSearchParams({
-    regid: swymConfig.regid,
-    sessionid: swymConfig.sessionid,
-    lid,
-  });
-
-  const fetchOptions: RequestInit = {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: formBody,
-  };
-
   try {
-    const response = await fetch(endpointUrl, fetchOptions);
-    const swymResponse = await response.json();
+    const response = await fetch('/api/swym', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'deleteList',
+        lid,
+        regid: swymConfig.regid,
+        sessionid: swymConfig.sessionid,
+      }),
+    });
+
+    const result = await response.json();
 
     return {
-      ok: response.ok,
-      status: response.status,
-      data: swymResponse,
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Unhandled exception:', error);
-    return {
-      ok: false,
-      status: 500,
-      error: true,
-      message: errorMessage,
-    };
-  }
-};
-
-/**
- * Adds a product variant to a specified wishlist list via the Swym API.
- *
- * @description
- * This function adds a product (and its variant) to a given wishlist (identified by `lid`)
- * for the current user session. The product is associated by its numeric product and variant IDs,
- * and the PDP URL is used to enhance tracking or redirection.
- *
- * Requires the user's `regid` and `sessionid` from Swym for proper session identification.
- *
- * @param {number} productId - The numeric ID of the product.
- * @param {number} variantId - The numeric ID of the product variant.
- * @param {string} productUrl - The PDP (Product Detail Page) URL.
- * @param {string} lid - The ID of the wishlist to which the product should be added.
- * @param {SwymConfig} swymConfig - The Swym configuration
- * @returns {Promise<SwymResponse>}
- * Returns a structured response indicating success or failure of the operation.
- */
-export const updateList = async (
-  productId: number,
-  variantId: number,
-  productUrl: string,
-  lid: string,
-  swymConfig: SwymConfig
-): Promise<SwymResponse> => {
-  const endpointUrl = `${SWYM_CONFIG.ENDPOINT}/api/v3/lists/update-ctx?pid=${encodeURIComponent(SWYM_CONFIG.PID)}`;
-
-  const formBody = new URLSearchParams({
-    regid: swymConfig.regid,
-    sessionid: swymConfig.sessionid,
-    lid,
-    a: `[{ "epi":${variantId},"empi":${productId},"du":"${productUrl}"}]`,
-  });
-
-  const fetchOptions: RequestInit = {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: formBody,
-  };
-
-  try {
-    const response = await fetch(endpointUrl, fetchOptions);
-    const swymResponse = await response.json();
-
-    return {
-      ok: response.ok,
-      status: response.status,
-      data: swymResponse,
+      ok: result.ok ?? response.ok,
+      status: result.status ?? response.status,
+      data: result.data,
+      error: result.error,
+      message: result.message,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -429,7 +390,7 @@ export const updateList = async (
  * @param {number} productId - The product ID
  * @param {number} variantId - The variant ID
  * @param {string} productUrl - The product URL
- * @param {string} lid - The list ID to remove from
+ * @param {string} listId - The list ID to remove from
  * @param {SwymConfig} swymConfig - The Swym configuration
  * @returns {Promise<SwymResponse>}
  */
@@ -437,35 +398,36 @@ export const removeFromWishlist = async (
   productId: number,
   variantId: number,
   productUrl: string,
-  lid: string,
+  listId: string,
   swymConfig: SwymConfig
 ): Promise<SwymResponse> => {
-  const endpointUrl = `${SWYM_CONFIG.ENDPOINT}/api/v3/lists/update-ctx?pid=${encodeURIComponent(SWYM_CONFIG.PID)}`;
-
-  const formBody = new URLSearchParams({
-    regid: swymConfig.regid,
-    sessionid: swymConfig.sessionid,
-    lid,
-    d: `[{ "epi":${variantId},"empi":${productId},"du":"${productUrl}"}]`,
-  });
-
-  const fetchOptions: RequestInit = {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: formBody,
-  };
-
   try {
-    const response = await fetch(endpointUrl, fetchOptions);
-    const swymResponse = await response.json();
+    const response = await fetch('/api/swym', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'updateList',
+        productId,
+        variantId,
+        productUrl,
+        lid: listId,
+        regid: swymConfig.regid,
+        sessionid: swymConfig.sessionid,
+        updateAction: 'remove',
+      }),
+    });
+
+    const result = await response.json();
 
     return {
-      ok: response.ok,
-      status: response.status,
-      data: swymResponse,
+      ok: result.ok ?? response.ok,
+      status: result.status ?? response.status,
+      data: result.data,
+      error: result.error,
+      message: result.message,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

@@ -39,3 +39,11 @@ export interface SwymApiError {
   message: string;
   data?: null;
 }
+
+export type SwymAction = 'fetchLists' | 'createList' | 'deleteList' | 'fetchListWithContents' | 'updateList';
+
+/**
+ * Shopify Global ID (GID) type
+ * Example: "gid://shopify/Product/123456789"
+ */
+export type ShopifyGID = string;
