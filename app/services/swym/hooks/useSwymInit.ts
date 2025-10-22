@@ -13,9 +13,9 @@ export const useSwymInit = () => {
   const {
     swymConfig,
     updateSwymConfig,
-    swymWishlistId,
-    updateSwymWishlistId,
-    updateSwymWishlists,
+    selectedWishlistId,
+    updateSelectedWishlistId,
+    updateAvailableWishlists,
     isInitialized,
   } = useWishlistContext();
 
@@ -59,18 +59,18 @@ export const useSwymInit = () => {
         if (listsResponse.ok && listsResponse.data && listsResponse.data.length > 0) {
           // Use existing wishlist
           const firstList = listsResponse.data[0];
-          updateSwymWishlistId(firstList.lid);
-          updateSwymWishlists(listsResponse.data);
+          updateSelectedWishlistId(firstList.lid);
+          updateAvailableWishlists(listsResponse.data);
         } else {
           // Create new default wishlist if none exists
           const createResponse = await createList('My Wishlist', swymConfig);
 
           if (createResponse.ok && createResponse.data) {
-            updateSwymWishlistId(createResponse.data.lid);
+            updateSelectedWishlistId(createResponse.data.lid);
             // Fetch again to get the full list with contents
             const refreshedLists = await fetchLists(swymConfig);
             if (refreshedLists.ok && refreshedLists.data) {
-              updateSwymWishlists(refreshedLists.data);
+              updateAvailableWishlists(refreshedLists.data);
             }
           } else {
             console.error('Failed to create wishlist:', createResponse.message);
@@ -82,11 +82,11 @@ export const useSwymInit = () => {
     };
 
     initializeWishlist();
-  }, [swymConfig, isInitialized, updateSwymWishlistId, updateSwymWishlists]);
+  }, [swymConfig, isInitialized, updateSelectedWishlistId, updateAvailableWishlists]);
 
   return {
     isInitialized,
     swymConfig,
-    swymWishlistId,
+    selectedWishlistId,
   };
 };

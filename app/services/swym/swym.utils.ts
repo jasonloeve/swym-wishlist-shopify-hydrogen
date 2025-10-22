@@ -1,4 +1,3 @@
-
 /**
  * Encodes a username and password into a Base64-encoded Basic Authentication header value.
  * Compatible with modern runtimes including Hydrogen 2+, Edge (e.g., Cloudflare Workers), and browsers.

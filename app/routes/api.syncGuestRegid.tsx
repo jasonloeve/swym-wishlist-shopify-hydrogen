@@ -1,9 +1,7 @@
-import type {Route} from './+types/api.validateSyncRegid';
-import {v4 as uuidv4} from 'uuid';
-import {getCustomerData} from '~/services/shopify';
+import type {Route} from './+types/api.syncGuestRegid';
 import {encodeBasicAuth} from '~/services/swym/swym.utils';
-import SWYM_CONFIG from '~/services/swym/swym.config';
-import {DeviceType} from '~/services/swym/swym.types';
+import {getSwymConfig} from '~/services/swym/swym.config.server';
+import type {DeviceType} from '~/services/swym/swym.types';
 
 interface ValidateSyncRegidRequestBody {
   useragenttype?: DeviceType;
@@ -57,23 +55,13 @@ export async function action({context, request}: Route.ActionArgs) {
     }
 
     // Get logged-in customer email
-    // @TODO - Method needs to be refactored to work in default Hydrogen base using new customer accounts.
     let useremail: string | undefined;
-    const token = await context.session.get('customerAccessToken');
 
-    if (token) {
-      try {
-        // @NOTE - Refactor - Moving to new customer accounts this Shopify getting data method may have to change to align.
-        const customer = await getCustomerData(context, token);
-        useremail = customer?.email;
-      } catch (error) {
-        console.warn('Failed to fetch customer data:', error);
-      }
-    }
-
-    const hasValidEmail = useremail && useremail !== 'undefined';
-
-    if (!hasValidEmail) {
+    try {
+      const customer = await context.customerAccount.get();
+      useremail = customer?.email;
+    } catch (error) {
+      // Customer not logged in
       const bodyError: ErrorResponse = {
         error: true,
         message: 'User must be logged in with valid email to sync guest wishlist',
@@ -86,6 +74,22 @@ export async function action({context, request}: Route.ActionArgs) {
       );
     }
 
+    if (!useremail) {
+      const bodyError: ErrorResponse = {
+        error: true,
+        message: 'Customer email not available',
+        swymResponse: null,
+      };
+
+      return Response.json(
+        {...bodyError},
+        {status: 401},
+      );
+    }
+
+    // Get Swym configuration from context.env
+    const config = getSwymConfig(context.env);
+
     // Prepare request to Swym
     const formParams = new URLSearchParams();
     formParams.append('useragenttype', deviceType);
@@ -93,10 +97,10 @@ export async function action({context, request}: Route.ActionArgs) {
     formParams.append('useremail', useremail);
 
     const authHeader = encodeBasicAuth(
-      SWYM_CONFIG.PID,
-      SWYM_CONFIG.REST_API_KEY,
+      config.PID,
+      config.REST_API_KEY,
     );
-    const endpointUrl = `${SWYM_CONFIG.ENDPOINT}/storeadmin/v3/user/guest-validate-sync`;
+    const endpointUrl = `${config.ENDPOINT}/storeadmin/v3/user/guest-validate-sync`;
 
     // Call Swym API
     const response = await fetch(endpointUrl, {

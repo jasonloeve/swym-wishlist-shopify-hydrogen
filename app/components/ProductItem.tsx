@@ -1,6 +1,6 @@
 import {Fragment} from 'react';
 import {Link} from 'react-router';
-import {Image, Money} from '@shopify/hydrogen';
+import {flattenConnection, Image, Money} from '@shopify/hydrogen';
 import type {
   ProductItemFragment,
   CollectionItemFragment,
@@ -21,6 +21,10 @@ export function ProductItem({
 }) {
   const variantUrl = useVariantUrl(product.handle);
   const image = product.featuredImage;
+
+  // @NOTE - Need to investigate if there are any new Hydrogen methods when dealing with variants
+  const variants = flattenConnection(product.variants);
+
   return (
     <Fragment key={product.id}>
       <Link
@@ -45,8 +49,8 @@ export function ProductItem({
       {/* @NOTE - Rough usage, when switching to built in base hydrogen functionality we may only need to pass through `productId` & productUrl */}
       <WishlistButton
         productId={product.id}
-        variantId={product.id}
-        productUrl={product.handle}
+        variantId={variants[0].id} //!!! @NOTE -Currently note safe, investigate a better way of dealing with variants
+        productUrl={variantUrl}
       />
     </Fragment>
   );

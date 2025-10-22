@@ -68,13 +68,13 @@ export function links() {
 }
 
 export async function loader(args: Route.LoaderArgs) {
+  const {storefront, env} = args.context;
+
   // Start fetching non-critical data without blocking time to first byte
   const deferredData = loadDeferredData(args);
 
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
-
-  const {storefront, env} = args.context;
 
   return {
     ...deferredData,
@@ -99,8 +99,11 @@ export async function loader(args: Route.LoaderArgs) {
  * Load data necessary for rendering content above the fold. This is the critical data
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
-async function loadCriticalData({context}: Route.LoaderArgs) {
+async function loadCriticalData({context, request}: Route.LoaderArgs) {
   const {storefront} = context;
+
+  // Get origin to build absolute URLs when needed in features/components
+  const origin = new URL(request.url).origin;
 
   const [header] = await Promise.all([
     storefront.query(HEADER_QUERY, {
@@ -112,7 +115,10 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
     // Add other queries here, so that they are loaded in parallel
   ]);
 
-  return {header};
+  return {
+    origin,
+    header
+  };
 }
 
 /**
@@ -179,6 +185,7 @@ export default function App() {
       shop={data.shop}
       consent={data.consent}
     >
+      {/* @NOTE - Wishlist provider built out to manage states base on local storage data */}
       <WishlistProvider>
         <PageLayout {...data}>
           <Outlet />
