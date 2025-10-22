@@ -49,7 +49,7 @@ export function ProductItem({
       {/* @NOTE - Rough usage, when switching to built in base hydrogen functionality we may only need to pass through `productId` & productUrl */}
       <WishlistButton
         productId={product.id}
-        variantId={variants[0].id}
+        variantId={variants[0].id} //!!! @NOTE -Currently note safe, investigate a better way of dealing with variants
         productUrl={variantUrl}
       />
     </Fragment>
