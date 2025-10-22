@@ -25,6 +25,8 @@ interface SuccessResponse {
 }
 
 export async function action({context, request}: Route.ActionArgs) {
+  // @NOTE - Need to gracefully fail, if env keys / values haven't been added to Hydrogen env setting this will break the frontend with a 500
+  // possibly return null if no config
   try {
     const body = (await request.json()) as GenerateRegidRequestBody;
     const deviceType = body?.useragenttype || 'unknown';
