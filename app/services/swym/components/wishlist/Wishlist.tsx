@@ -64,15 +64,13 @@ export const Wishlist = () => {
       }
     };
 
-    fetchWishlistContents();
+    void fetchWishlistContents();
   }, [selectedWishlistId, swymConfig]);
 
   return (
     <div>
       {products.length === 0 ? (
-        <>
-          <EmptyWishlist />
-        </>
+        <EmptyWishlist />
       ) : (
         <>
           <div>

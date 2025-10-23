@@ -35,6 +35,7 @@ export const useSyncWishlistOnLogin = (customer: Customer | null) => {
   const hasProcessedLogin = useRef(false);
 
   useEffect(() => {
+
     // Don't run if not initialized or already processed this session
     if (!isInitialized || hasProcessedLogin.current) return;
 
@@ -43,7 +44,7 @@ export const useSyncWishlistOnLogin = (customer: Customer | null) => {
 
     // User just logged in with an existing guest wishlist - sync it
     if (isLoggedIn && hasGuestRegid) {
-      syncGuestToCustomer(customer.email);
+      void syncGuestToCustomer(customer.email); // @NOTE - Customer not yet available, need to add customer to context in root
       hasProcessedLogin.current = true;
     }
   }, [customer, swymConfig, isInitialized]);

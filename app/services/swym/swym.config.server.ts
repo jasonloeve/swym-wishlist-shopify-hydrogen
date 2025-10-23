@@ -31,6 +31,7 @@ export interface SwymServerConfig {
  * @returns SwymServerConfig with validated environment variables
  */
 export function getSwymConfig(env: Env): SwymServerConfig {
+  // @NOTE - Note sure this is the right approach, investigate community topics
   const config = {
     REST_API_KEY: env.SWYM_API_KEY || '',
     ENDPOINT: env.SWYM_ENDPOINT || '',

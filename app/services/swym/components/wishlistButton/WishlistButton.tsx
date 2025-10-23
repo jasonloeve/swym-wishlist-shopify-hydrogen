@@ -81,6 +81,8 @@ export function WishlistButton({productId, variantId, productUrl}: WishlistButto
     if (!availableWishlists || availableWishlists.length === 0) return false;
 
     return availableWishlists.some((list) =>
+
+      // @TODO - Check empty
       list.listcontents?.some(
         (item) =>
           item.empi === Number(swymProductId) &&
