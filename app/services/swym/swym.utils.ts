@@ -46,8 +46,9 @@ export function detectClientDeviceType(): 'mobile' | 'desktop' | 'tablet' | 'unk
  * @param rawProductId The Shopify product ID string.
  * @returns The extracted product ID or an empty string if not found.
  */
-export function extractProductId(rawProductId: string | undefined): string {
-  return rawProductId
-    ? rawProductId.slice(rawProductId.lastIndexOf('/') + 1)
-    : '';
+export function extractProductId(rawProductId: string | undefined): number {
+  if (!rawProductId) return;
+
+  const productId = rawProductId.slice(rawProductId.lastIndexOf('/') + 1);
+  return parseInt(productId, 10);
 }
