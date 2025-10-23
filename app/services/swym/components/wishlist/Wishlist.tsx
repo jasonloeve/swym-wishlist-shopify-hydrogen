@@ -45,9 +45,7 @@ export const Wishlist = () => {
         }
 
         // Extract product IDs and filter out invalid values
-        const productIds = items
-          .map((item) => item.empi)
-          .filter((id): id is number => typeof id === 'number' && id > 0);
+        const productIds = items.map((item) => item.empi).filter((id) => id > 0);
 
         if (productIds.length === 0) {
           setProducts([]);
