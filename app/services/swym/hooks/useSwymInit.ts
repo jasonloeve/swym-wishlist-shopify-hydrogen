@@ -44,7 +44,7 @@ export const useSwymInit = () => {
       }
     };
 
-    initializeSwymConfig();
+    void initializeSwymConfig();
   }, [swymConfig, updateSwymConfig]);
 
   // Step 2: Fetch or create wishlist
@@ -81,7 +81,7 @@ export const useSwymInit = () => {
       }
     };
 
-    initializeWishlist();
+    void initializeWishlist();
   }, [swymConfig, isInitialized, updateSelectedWishlistId, updateAvailableWishlists]);
 
   return {

@@ -57,6 +57,9 @@ interface WishlistButtonProps {
 }
 
 export function WishlistButton({productId, variantId, productUrl}: WishlistButtonProps) {
+  // @NOTE - Temp return null if no values, to be updated after investigating new hydrogen variants build in login / hooks
+  if (!productId && !variantId && !productUrl) return
+
   // @NOTE - Swym requires absolute product URL (origin + path + handle)
   const {origin} = useRouteLoaderData('root');
   const absoluteProductUrl = `${origin}${productUrl}`;
@@ -81,10 +84,12 @@ export function WishlistButton({productId, variantId, productUrl}: WishlistButto
     if (!availableWishlists || availableWishlists.length === 0) return false;
 
     return availableWishlists.some((list) =>
+
+      // @TODO - Check empty
       list.listcontents?.some(
         (item) =>
-          item.empi === Number(swymProductId) &&
-          item.epi === Number(swymVariantId)
+          item.empi === swymProductId &&
+          item.epi === swymVariantId
       )
     );
   }, [availableWishlists, swymProductId, swymVariantId]);
@@ -118,8 +123,8 @@ export function WishlistButton({productId, variantId, productUrl}: WishlistButto
 
     try {
       const result = wishlisted
-        ? await removeFromWishlist(Number(swymProductId), Number(swymVariantId), absoluteProductUrl, selectedWishlistId, swymConfig)
-        : await addToWishlist(Number(swymProductId), Number(swymVariantId), absoluteProductUrl, selectedWishlistId, swymConfig);
+        ? await removeFromWishlist(swymProductId, swymVariantId, absoluteProductUrl, selectedWishlistId, swymConfig)
+        : await addToWishlist(swymProductId, swymVariantId, absoluteProductUrl, selectedWishlistId, swymConfig);
 
       if (result?.ok) {
         await updateButtonState();

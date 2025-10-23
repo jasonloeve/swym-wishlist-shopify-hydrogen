@@ -25,15 +25,13 @@ interface SuccessResponse {
 }
 
 export async function action({context, request}: Route.ActionArgs) {
-  // @NOTE - Need to gracefully fail, if env keys / values haven't been added to Hydrogen env setting this will break the frontend with a 500
-  // possibly return null if no config
   try {
     const body = (await request.json()) as GenerateRegidRequestBody;
     const deviceType = body?.useragenttype || 'unknown';
     const appId = body?.appId || SWYM_DEFAULTS.APP_ID;
 
     // Get Swym configuration from context.env
-    const config = getSwymConfig(context.env);
+    const config = getSwymConfig(context.env); // @TODO - This will through a 500 if env hasn't been added to storefront settings before this is deployed, need to look at returning null if no config
 
     const authHeader = encodeBasicAuth(
       config.PID,
